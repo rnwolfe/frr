@@ -462,6 +462,14 @@ static inline void zebra_evpn_neigh_start_hold_timer(struct zebra_neigh *n)
 
 	if (n->hold_timer)
 		return;
+	if (n->ifindex == IFINDEX_INTERNAL) {
+		if (IS_ZEBRA_DEBUG_EVPN_MH_NEIGH)
+			zlog_debug("sync-neigh vni %u ip %pIA mac %pEA 0x%x hold Ignore as"
+			           " SVI/BVI is deleted", n->zevpn->vni, &n->ip, &n->emac,
+			           n->flags);
+		zebra_evpn_neigh_del(n->zevpn, n);
+		return;
+	}
 
 	if (IS_ZEBRA_DEBUG_EVPN_MH_NEIGH && n->zevpn)
 		zlog_debug("sync-neigh vni %u ip %pIA mac %pEA 0x%x hold start",
