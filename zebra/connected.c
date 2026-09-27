@@ -234,7 +234,7 @@ void connected_up(struct interface *ifp, struct connected *ifc)
 	uint32_t flags = 0;
 	uint32_t count = 0;
 	struct connected *c;
-	bool install_local = true;
+	bool install_local = false;
 
 	zvrf = ifp->vrf->info;
 	if (!zvrf) {
@@ -440,7 +440,7 @@ void connected_down(struct interface *ifp, struct connected *ifc)
 	struct zebra_vrf *zvrf;
 	uint32_t count = 0;
 	struct connected *c;
-	bool remove_local = true;
+	bool remove_local = false;
 
 	zvrf = ifp->vrf->info;
 	if (!zvrf) {
