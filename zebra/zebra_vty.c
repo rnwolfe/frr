@@ -594,6 +594,9 @@ static void vty_show_ip_route(struct vty *vty, struct route_node *rn,
 		json_object_int_add(json_route, "internalNextHopActiveNum",
 				    nexthop_group_active_nexthop_num(
 					    &(re->nhe->nhg)));
+		if (CHECK_FLAG(re->status, ROUTE_ENTRY_SEND_NHT_REMOVAL))
+			json_object_boolean_true_add(json_route, "kernelRemoved");
+
 		json_object_int_add(json_route, "nexthopGroupId", re->nhe_id);
 
 		if (re->nhe_installed_id != 0)
