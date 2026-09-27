@@ -30,8 +30,60 @@ struct zebra_ns;
 
 #define RTM_NHA(h)                                                             \
 	((struct rtattr *)(((char *)(h)) + NLMSG_ALIGN(sizeof(struct nhmsg))))
+/* FPM-specific extension values, for messages and attributes */
 
+typedef enum {
+	/*
+	 * Ideally, this should be set to (RTM_MAX + 1) but as
+	 * FRR and SWSS build with slightly different kernel headers
+	 * RTM_MAX differs between them...
+	 */
+	RTM_FPM_FIRST = 140,
+	/* Ask FPM server to send encap info */
+	RTM_FPM_GETENCAPS = RTM_FPM_FIRST,
+	/* Notification about new or updated encap */
+	RTM_FPM_ADDENCAP,
+	/* Notification about deleted encap */
+	RTM_FPM_DELENCAP,
+	/* Notify FPM about a new Split Horizon List for a given port */
+	RTM_FPM_ADD_EVPN_SHL,
+	/* Notify FPM about a Split Horizon List being deleted from a port */
+	RTM_FPM_DEL_EVPN_SHL,
+	/* Notify FPM about an add/update of DF role information for a port */
+	RTM_FPM_ADD_EVPN_DF,
+	/* Notify FPM about a delete of DF role information */
+	RTM_FPM_DEL_EVPN_DF,
+	/* Notify FPM about a backup NHG for a port */
+	RTM_FPM_ADD_EVPN_ES_BACKUP_NHG,
+	/* Notify FPM about a delete of a backup NHG */
+	RTM_FPM_DEL_EVPN_ES_BACKUP_NHG,
+	RTM_FPM_LAST = RTM_FPM_DEL_EVPN_ES_BACKUP_NHG,
+	RTM_FPM_MAX = RTM_FPM_LAST
+} rtm_fpm_msg_types_et;
 
+struct evpn_shl_msg {
+	int esm_ifindex;
+	uint16_t esm_vid;
+};
+
+struct evpn_df_msg {
+	int edm_ifindex;
+	uint16_t edm_vid;
+	int edm_non_df;
+};
+
+struct evpn_backup_nhg_msg {
+	int ebnm_ifindex;
+	int ebnm_backup_nhg_id;
+};
+
+/* Attribute IDs for SHL Updates */
+#define FPM_SHL_IPV4_ADDR	1
+#define FPM_SHL_IPV6_ADDR	2
+#define FPM_SHL_LAST		FPM_SHL_IPV6_ADDR
+#define FPM_SHL_MAX		FPM_SHL_LAST
+
+/* End of FPM EVPN MH extensions */
 #define NL_RCV_PKT_BUF_SIZE     (34 * 1024)
 #define NL_PKT_BUF_SIZE         8192
 
