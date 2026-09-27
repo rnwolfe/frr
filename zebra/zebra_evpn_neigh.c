@@ -245,6 +245,7 @@ static void zebra_evpn_sync_neigh_dp_install(struct zebra_neigh *n,
 	struct interface *ifp;
 	bool set_static;
 	bool set_router;
+	bool trigger_probe = false;
 
 	zns = zebra_ns_lookup(NS_DEFAULT);
 	ifp = if_lookup_by_index_per_ns(zns, n->ifindex);
@@ -277,7 +278,7 @@ static void zebra_evpn_sync_neigh_dp_install(struct zebra_neigh *n,
 			set_static ? " static" : "",
 			set_inactive ? " inactive" : "");
 	dplane_local_neigh_add(ifp, &n->ip, &n->emac, set_router, set_static,
-			       set_inactive);
+			       set_inactive, trigger_probe);
 }
 
 /*
@@ -451,6 +452,14 @@ static void zebra_evpn_neigh_hold_exp_cb(struct event *t)
 
 static inline void zebra_evpn_neigh_start_hold_timer(struct zebra_neigh *n)
 {
+	struct zebra_ns *zns;
+	struct interface *ifp;
+
+	bool set_router = !!CHECK_FLAG(n->flags, ZEBRA_NEIGH_ROUTER_FLAG);
+	bool set_static = zebra_evpn_neigh_is_static(n);
+	bool set_inactive = !!CHECK_FLAG(n->flags, ZEBRA_NEIGH_LOCAL_INACTIVE);
+	bool trigger_probe = true;
+
 	if (n->hold_timer)
 		return;
 
@@ -459,6 +468,12 @@ static inline void zebra_evpn_neigh_start_hold_timer(struct zebra_neigh *n)
 			   n->zevpn->vni, &n->ip, &n->emac, n->flags);
 	event_add_timer(zrouter.master, zebra_evpn_neigh_hold_exp_cb, n,
 			zmh_info->neigh_hold_time, &n->hold_timer);
+
+	zns = zebra_ns_lookup(NS_DEFAULT);
+	ifp = if_lookup_by_index_per_ns(zns, n->ifindex);
+
+	(void)dplane_local_neigh_add(ifp, &n->ip, &n->emac,
+	                             set_router, set_static, set_inactive, trigger_probe);
 }
 
 static void zebra_evpn_local_neigh_deref_mac(struct zebra_neigh *n,
