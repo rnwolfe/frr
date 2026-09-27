@@ -1930,6 +1930,7 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
 		uint8_t old_hw_addr[INTERFACE_HWADDR_MAX];
 		char *desc;
 		uint8_t family;
+		uint64_t change_flags;
 
 		/* If VRF, create or update the VRF structure itself. */
 		if (zif_type == ZEBRA_IF_VRF && !vrf_is_backend_netns())
@@ -1951,6 +1952,7 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
 		startup = dplane_ctx_get_ifp_startup(ctx);
 		desc = dplane_ctx_get_ifp_desc(ctx);
 		family = dplane_ctx_get_ifp_family(ctx);
+		change_flags = dplane_ctx_get_ifp_change_flags(ctx);
 
 #ifndef AF_BRIDGE
 		/*
@@ -2058,6 +2060,25 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
 					   name, ifp->ifindex, zif_slave_type, master_ifindex,
 					   (unsigned long long)flags);
 
+			/* Update flags - all paths need this */
+			ifp->flags = flags;
+
+			/*
+			 * A promiscuity-only flag change (e.g. tcpdump or any
+			 * AF_PACKET socket opening on the interface) must not be
+			 * treated as an operational-state change: that emits a
+			 * spurious interface-up and triggers a full route
+			 * re-evaluation/re-download. Skip routing notifications;
+			 * the flags were already updated above.
+			 */
+			if (change_flags == IFF_PROMISC) {
+				/* Flags already updated above, skip routing notifications */
+				if (IS_ZEBRA_DEBUG_KERNEL)
+					zlog_debug("%s: PROMISC-only update for %s(%u), no routing notification",
+						   __func__, name, ifp->ifindex);
+				return;
+			}
+
 			set_ifindex(ifp, ifindex, zns);
 			if_update_state_mtu(ifp, mtu);
 			if_update_state_mtu6(ifp, mtu);
@@ -2085,8 +2106,6 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
 						       rc_bitfield);
 
 			if (if_is_no_ptm_operative(ifp)) {
-
-				ifp->flags = flags;
 				bool is_up = if_is_operative(ifp);
 
 				if (!if_is_no_ptm_operative(ifp) ||
@@ -2138,7 +2157,6 @@ static void zebra_if_dplane_ifp_handling(struct zebra_dplane_ctx *ctx)
 					}
 				}
 			} else {
-				ifp->flags = flags;
 				if (if_is_operative(ifp) &&
 				    !CHECK_FLAG(zif->flags,
 						ZIF_FLAG_PROTODOWN)) {
