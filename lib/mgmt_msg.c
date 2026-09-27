@@ -28,6 +28,8 @@
 #define MGMT_MSG_ERR(ms, fmt, ...)                                             \
 	zlog_err("%s: %s: " fmt, (ms)->idtag, __func__, ##__VA_ARGS__)
 
+#define MGMT_MSG_INFO(ms, fmt, ...)                                             \
+	zlog_info("%s: %s: " fmt, (ms)->idtag, __func__, ##__VA_ARGS__)
 DEFINE_MTYPE(LIB, MSG_CONN, "msg connection state");
 
 /**
@@ -70,7 +72,7 @@ enum mgmt_msg_rsched mgmt_msg_read(struct mgmt_msg_state *ms, int fd,
 		}
 		if (n <= 0) {
 			if (n == 0)
-				MGMT_MSG_ERR(ms, "got EOF/disconnect");
+				MGMT_MSG_INFO(ms, "got EOF/disconnect");
 			else
 				MGMT_MSG_ERR(ms,
 					     "got error while reading: '%s'",
