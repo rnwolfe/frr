@@ -45,6 +45,12 @@ else
   CONF_ASAN=--enable-address-sanitizer
 endif
 
+ifeq ($(filter pkg.frr.tcmalloc,$(DEB_BUILD_PROFILES)),)
+  CONF_TCMALLOC=
+else
+  CONF_TCMALLOC=--enable-gperf-tcmalloc
+endif
+
 DEB_BUILD_ARCH ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH)
 DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
@@ -72,6 +78,7 @@ override_dh_auto_configure:
 		$(CONF_PIM6) \
 		$(CONF_GRPC) \
 		$(CONF_ASAN) \
+		$(CONF_TCMALLOC) \
 		--with-libpam \
 		--enable-doc \
 		--enable-doc-html \
