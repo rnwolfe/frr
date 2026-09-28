@@ -1966,6 +1966,9 @@ static struct nexthop *nexthop_set_resolved(afi_t afi,
 	if (CHECK_FLAG(newhop->flags, NEXTHOP_FLAG_EVPN)) {
 		resolved_hop->nh_encap_type = newhop->nh_encap_type;
 		memcpy(&(resolved_hop->rmac), &(newhop->rmac), ETH_ALEN);
+		/* The FPM encodes the router MAC from nh_encap.encap_data. */
+		memcpy(&(resolved_hop->nh_encap.encap_data.rmac),
+		       &(newhop->nh_encap.encap_data.rmac), ETH_ALEN);
 		SET_FLAG(resolved_hop->flags, NEXTHOP_FLAG_EVPN);
 	}
 
