@@ -3862,9 +3862,25 @@ int dplane_ctx_route_init(struct zebra_dplane_ctx *ctx, enum dplane_op_e op,
 			continue;
 
 		zl3vni = zl3vni_from_vrf(nexthop->vrf_id);
+		if (!zl3vni || !is_l3vni_oper_up(zl3vni))
+			zl3vni = zl3vni_from_vrf(re->vrf_id);
 		if (zl3vni && is_l3vni_oper_up(zl3vni)) {
+			struct mpls_label_stack *labels = nexthop->nh_label;
+			vni_t encap_vni = zl3vni->vni;
+
+			/*
+			 * Default encap is this VRF's L3VNI. A downstream-VNI
+			 * nexthop keeps the VNI of the VRF that originated the
+			 * route as its EVPN label, and that is the VNI the
+			 * remote VTEP decapsulates into.
+			 */
+			if (labels && nexthop->nh_label_type == ZEBRA_LSP_EVPN &&
+			    labels->num_labels)
+				encap_vni = label2vni(
+					&labels->label[labels->num_labels - 1]);
+
 			nexthop->nh_encap_type = NET_VXLAN;
-			nexthop->nh_encap.encap_data.vni = zl3vni->vni;
+			nexthop->nh_encap.encap_data.vni = encap_vni;
 		}
 	}
 
