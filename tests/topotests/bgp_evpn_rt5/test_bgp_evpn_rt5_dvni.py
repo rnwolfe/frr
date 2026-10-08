@@ -350,6 +350,33 @@ configure terminal
     )
 
 
+def test_dvni_import_keeps_own_rt():
+    """
+    vrf-102 configures its own route-target, which is also the value of its
+    auto-derived RT (65000:102). Adding the import of vrf-101's RT must not
+    remove it: configuring a route-target removes the auto RT, and that removal
+    has to leave a configured RT of the same value alone.
+    """
+    tgen = get_topogen()
+    if tgen.routers_have_failure():
+        pytest.skip(tgen.errors)
+
+    r2 = tgen.gears["r2"]
+
+    expected = {"import-rts": ["RT:65000:101", "RT:65000:102"]}
+    test_func = partial(
+        topotest.router_json_cmp,
+        r2,
+        "show bgp vrf {} vni json".format(IMPORTING_VRF),
+        expected,
+        exact=False,
+    )
+    _, result = topotest.run_and_expect(test_func, None, count=10, wait=1)
+    assert result is None, "{} lost its own import RT:\n{}".format(
+        IMPORTING_VRF, result
+    )
+
+
 def test_dvni_route_fpm_encap():
     """
     The leaked route reaches the FPM out of vrf-102's SVI with the VXLAN
