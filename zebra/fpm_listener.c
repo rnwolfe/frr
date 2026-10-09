@@ -383,6 +383,7 @@ struct netlink_nh {
 	int if_index;
 	uint16_t encap_type;
 	uint32_t vxlan_vni;
+	struct rtattr *vxlan_rmac;
 };
 
 struct netlink_msg_ctx {
@@ -479,7 +480,7 @@ static int parse_rtattrs(struct netlink_msg_ctx *ctx, struct rtattr *rta,
  */
 static int netlink_msg_ctx_add_nh(struct netlink_msg_ctx *ctx, int if_index,
 				  struct rtattr *gateway, uint16_t encap_type,
-				  uint32_t vxlan_vni)
+				  uint32_t vxlan_vni, struct rtattr *vxlan_rmac)
 {
 	struct netlink_nh *nh;
 
@@ -495,6 +496,9 @@ static int netlink_msg_ctx_add_nh(struct netlink_msg_ctx *ctx, int if_index,
 
 	nh->encap_type = encap_type;
 	nh->vxlan_vni = vxlan_vni;
+	/* The VXLAN encap may carry the router MAC after the VNI */
+	if (encap_type == NET_VXLAN && vxlan_rmac && RTA_PAYLOAD(vxlan_rmac) >= ETH_ALEN)
+		nh->vxlan_rmac = vxlan_rmac;
 	return 1;
 }
 
@@ -561,7 +565,7 @@ static int parse_multipath_attr(struct netlink_msg_ctx *ctx,
 			vxlan_vni = 0;
 
 		netlink_msg_ctx_add_nh(ctx, rtnh->rtnh_ifindex, gateway,
-				       encap_type, vxlan_vni);
+				       encap_type, vxlan_vni, tb[1]);
 	}
 
 	return 1;
@@ -629,7 +633,7 @@ static int parse_route_msg(struct netlink_msg_ctx *ctx)
 			vxlan_vni = *(uint32_t *)RTA_DATA(tb[0]);
 
 		netlink_msg_ctx_add_nh(ctx, if_index, gateway, encap_type,
-				       vxlan_vni);
+				       vxlan_vni, tb[1]);
 	}
 
 	rtattr = rtattrs[RTA_MULTIPATH];
@@ -798,6 +802,13 @@ static int netlink_msg_ctx_snprint(struct netlink_msg_ctx *ctx, char *buf,
 			cur += snprintf(cur, end - cur,
 					", Encap Type: %u Vxlan vni %u",
 					nh->encap_type, nh->vxlan_vni);
+
+		if (nh->vxlan_rmac) {
+			const uint8_t *mac = RTA_DATA(nh->vxlan_rmac);
+
+			cur += snprintf(cur, end - cur, " rmac %02x:%02x:%02x:%02x:%02x:%02x",
+					mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+		}
 	}
 
 	return cur - buf;

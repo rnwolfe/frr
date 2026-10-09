@@ -189,8 +189,8 @@ def _fpm_route_messages(router, prefix):
     oldest first. Each one reads "New route <prefix>, ..." or
     "Del route <prefix>, ..." followed by one line per nexthop, which ends
     with ", Encap Type: <type> Vxlan vni <vni>" when the nexthop carries a
-    VXLAN encapsulation (see netlink_msg_ctx_snprint() in
-    zebra/fpm_listener.c).
+    VXLAN encapsulation, followed by " rmac <mac>" when that has a router
+    MAC (see netlink_msg_ctx_snprint() in zebra/fpm_listener.c).
     """
     try:
         with open(_fpm_log_path(router), "r") as f:
@@ -226,7 +226,7 @@ def _check_fpm_route_encap(router, prefix, gateway, vni, ifname=None):
         return "FPM listener received no message for {}".format(prefix)
 
     via = r"\d+" if ifname is None else str(_ifindex(router, ifname))
-    nexthop = r"^ +{} via interface {}, Encap Type: \d+ Vxlan vni {}$".format(
+    nexthop = r"^ +{} via interface {}, Encap Type: \d+ Vxlan vni {}( rmac \S+)?$".format(
         re.escape(gateway), via, vni
     )
     for message in reversed(messages):
@@ -452,7 +452,7 @@ def _fpm_route_vnis(router, prefix, ifname):
     or there is none.
     """
     nexthop = re.compile(
-        r"^ +\S+ via interface {}, Encap Type: \d+ Vxlan vni (\d+)$".format(
+        r"^ +\S+ via interface {}, Encap Type: \d+ Vxlan vni (\d+)(?: rmac \S+)?$".format(
             _ifindex(router, ifname)
         ),
         re.MULTILINE,
